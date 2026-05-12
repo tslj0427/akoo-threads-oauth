@@ -155,6 +155,8 @@
     const code = params.get("code");
     const error = params.get("error");
     const errorDescription = params.get("error_description") || params.get("error_reason");
+    const state = params.get("state") || "";
+    const isPublicDebug = state.startsWith("public-debug-");
     const expectedAccount = sessionStorage.getItem("akoo_threads_expected_account") || "cool.life512";
     const statusBox = document.querySelector("#statusBox");
     const details = document.querySelector("#details");
@@ -190,6 +192,17 @@
       setTimeout(() => {
         window.location.href = localCallbackUrl;
       }, 1200);
+    } else if (code && isPublicDebug) {
+      statusBox.className = "status success";
+      statusBox.textContent = "OAuth 跳轉測試成功";
+      details.innerHTML = `
+        <p>預期串接帳號：</p>
+        <code>${htmlEscape(expectedAccount)}</code>
+        <p>授權碼狀態：</p>
+        <code>${htmlEscape(maskCode(code))}</code>
+        <p class="small">這只是公開頁的跳轉測試，不會交換 token，也不會發文。若要測 threads_content_publish，請從本機測試器開始。</p>
+      `;
+      localButton.href = "http://127.0.0.1:8787/";
     } else if (code) {
       statusBox.className = "status success";
       statusBox.textContent = "OAuth 回傳成功，已收到授權碼";
