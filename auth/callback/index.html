@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>阿酷 Threads OAuth Callback</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f8;
+      --panel: #ffffff;
+      --text: #1d1d1f;
+      --muted: #5f6368;
+      --line: #d8dee4;
+      --accent: #0f766e;
+      --danger: #b42318;
+      --danger-bg: #fff1f0;
+      --success-bg: #ecfdf3;
+      --success: #067647;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      margin-top: 20px;
+    }
+
+    .status {
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-top: 16px;
+      font-weight: 650;
+    }
+
+    .success {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid #abefc6;
+    }
+
+    .danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid #fecdca;
+    }
+
+    code {
+      display: block;
+      overflow-wrap: anywhere;
+      background: #f1f5f9;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: #0f172a;
+      margin: 8px 0 14px;
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    a.button {
+      display: inline-block;
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      padding: 12px 18px;
+      font-size: 16px;
+      font-weight: 650;
+      text-decoration: none;
+      margin-top: 18px;
+    }
+
+    .small {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Threads 授權回傳頁</h1>
+    <p>這是阿酷 Threads 助手的固定 OAuth callback 頁。</p>
+
+    <section class="panel" id="resultPanel">
+      <div id="statusBox" class="status">正在讀取授權結果...</div>
+      <div id="details"></div>
+      <a class="button" href="/akoo-threads-oauth/">回到測試頁</a>
+    </section>
+
+    <section class="panel">
+      <h2>安全說明</h2>
+      <ul>
+        <li>本頁不要求 Threads 密碼。</li>
+        <li>本頁不顯示完整授權碼。</li>
+        <li>本頁不保存 App Secret 或 access token。</li>
+        <li>本工具不會未經確認自動發文、回覆或私訊。</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const error = params.get("error");
+    const errorDescription = params.get("error_description") || params.get("error_reason");
+    const expectedAccount = sessionStorage.getItem("akoo_threads_expected_account") || "cool.life512";
+    const statusBox = document.querySelector("#statusBox");
+    const details = document.querySelector("#details");
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function maskCode(value) {
+      if (!value) return "";
+      if (value.length <= 10) return "已收到，長度過短不顯示";
+      return `${value.slice(0, 6)}...${value.slice(-4)}（已遮蔽）`;
+    }
+
+    if (error) {
+      statusBox.className = "status danger";
+      statusBox.textContent = "Threads 授權未完成";
+      details.innerHTML = `
+        <p>Meta / Threads 回傳錯誤：</p>
+        <code>${escapeHtml(error)}</code>
+        <p>${escapeHtml(errorDescription ? errorDescription : "使用者可能取消授權，或 App 設定尚未完成。")}</p>
+      `;
+    } else if (code) {
+      statusBox.className = "status success";
+      statusBox.textContent = "OAuth 回傳成功，已收到授權碼";
+      details.innerHTML = `
+        <p>預期串接帳號：</p>
+        <code>${escapeHtml(expectedAccount)}</code>
+        <p>授權碼狀態：</p>
+        <code>${escapeHtml(maskCode(code))}</code>
+        <p class="small">下一步必須在本機安全環境或後端服務用授權碼交換 access token，再確認授權帳號。不要把 App Secret 貼到公開頁面、聊天或 Obsidian。</p>
+      `;
+    } else {
+      statusBox.className = "status danger";
+      statusBox.textContent = "沒有收到授權碼";
+      details.innerHTML = `
+        <p>請確認 Meta 後台的「有效的 OAuth 重新導向 URI」完全等於：</p>
+        <code>https://tslj0427.github.io/akoo-threads-oauth/auth/callback/</code>
+      `;
+    }
+  </script>
+</body>
+</html>
