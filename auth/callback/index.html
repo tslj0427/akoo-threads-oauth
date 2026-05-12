@@ -13,10 +13,13 @@
       --muted: #5f6368;
       --line: #d8dee4;
       --accent: #0f766e;
+      --accent-dark: #115e59;
       --danger: #b42318;
       --danger-bg: #fff1f0;
       --success-bg: #ecfdf3;
       --success: #067647;
+      --warning: #8a4b00;
+      --warning-bg: #fff7ed;
     }
 
     * {
@@ -41,6 +44,11 @@
       margin: 0 0 12px;
       font-size: 30px;
       line-height: 1.2;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 20px;
     }
 
     p {
@@ -75,6 +83,12 @@
       border: 1px solid #fecdca;
     }
 
+    .warning {
+      background: var(--warning-bg);
+      color: var(--warning);
+      border: 1px solid #fed7aa;
+    }
+
     code {
       display: block;
       overflow-wrap: anywhere;
@@ -104,6 +118,10 @@
       margin-top: 18px;
     }
 
+    a.button:hover {
+      background: var(--accent-dark);
+    }
+
     .small {
       font-size: 14px;
     }
@@ -112,12 +130,12 @@
 <body>
   <main>
     <h1>Threads 授權回傳頁</h1>
-    <p>這是阿酷 Threads 助手的固定 OAuth callback 頁。</p>
+    <p>這是阿酷 Threads 助手的固定 OAuth callback 頁。收到授權結果後，會把結果轉回本機測試器處理。</p>
 
     <section class="panel" id="resultPanel">
       <div id="statusBox" class="status">正在讀取授權結果...</div>
       <div id="details"></div>
-      <a class="button" href="/akoo-threads-oauth/">回到測試頁</a>
+      <a id="localButton" class="button" href="http://127.0.0.1:8787/">回到本機測試器</a>
     </section>
 
     <section class="panel">
@@ -126,6 +144,7 @@
         <li>本頁不要求 Threads 密碼。</li>
         <li>本頁不顯示完整授權碼。</li>
         <li>本頁不保存 App Secret 或 access token。</li>
+        <li>App Secret 只應輸入在本機測試器。</li>
         <li>本工具不會未經確認自動發文、回覆或私訊。</li>
       </ul>
     </section>
@@ -139,15 +158,8 @@
     const expectedAccount = sessionStorage.getItem("akoo_threads_expected_account") || "cool.life512";
     const statusBox = document.querySelector("#statusBox");
     const details = document.querySelector("#details");
-
-    function escapeHtml(value) {
-      return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
+    const localButton = document.querySelector("#localButton");
+    const localCallbackUrl = `http://127.0.0.1:8787/auth/callback${window.location.search}`;
 
     function maskCode(value) {
       if (!value) return "";
@@ -155,31 +167,51 @@
       return `${value.slice(0, 6)}...${value.slice(-4)}（已遮蔽）`;
     }
 
+    function htmlEscape(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    localButton.href = localCallbackUrl;
+
     if (error) {
       statusBox.className = "status danger";
       statusBox.textContent = "Threads 授權未完成";
       details.innerHTML = `
         <p>Meta / Threads 回傳錯誤：</p>
-        <code>${escapeHtml(error)}</code>
-        <p>${escapeHtml(errorDescription ? errorDescription : "使用者可能取消授權，或 App 設定尚未完成。")}</p>
+        <code>${htmlEscape(error)}</code>
+        <p>${htmlEscape(errorDescription || "使用者可能取消授權，或 App 設定尚未完成。")}</p>
+        <p class="small">如果本機測試器正在開啟，系統會嘗試把錯誤結果轉回本機頁面。</p>
       `;
+      setTimeout(() => {
+        window.location.href = localCallbackUrl;
+      }, 1200);
     } else if (code) {
       statusBox.className = "status success";
       statusBox.textContent = "OAuth 回傳成功，已收到授權碼";
       details.innerHTML = `
         <p>預期串接帳號：</p>
-        <code>${escapeHtml(expectedAccount)}</code>
+        <code>${htmlEscape(expectedAccount)}</code>
         <p>授權碼狀態：</p>
-        <code>${escapeHtml(maskCode(code))}</code>
-        <p class="small">下一步必須在本機安全環境或後端服務用授權碼交換 access token，再確認授權帳號。不要把 App Secret 貼到公開頁面、聊天或 Obsidian。</p>
+        <code>${htmlEscape(maskCode(code))}</code>
+        <p class="small">正在轉回本機測試器。App Secret 與 access token 不會經過這個公開頁面保存。</p>
       `;
+      setTimeout(() => {
+        window.location.href = localCallbackUrl;
+      }, 1200);
     } else {
-      statusBox.className = "status danger";
+      statusBox.className = "status warning";
       statusBox.textContent = "沒有收到授權碼";
       details.innerHTML = `
         <p>請確認 Meta 後台的「有效的 OAuth 重新導向 URI」完全等於：</p>
         <code>https://tslj0427.github.io/akoo-threads-oauth/auth/callback/</code>
+        <p class="small">如果你要測 threads_content_publish，請先打開本機測試器再開始授權。</p>
       `;
+      localButton.href = "http://127.0.0.1:8787/";
     }
   </script>
 </body>
