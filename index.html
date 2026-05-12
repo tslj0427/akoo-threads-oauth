@@ -16,6 +16,8 @@
       --accent-dark: #115e59;
       --warning: #8a4b00;
       --warning-bg: #fff7ed;
+      --success: #067647;
+      --success-bg: #ecfdf3;
     }
 
     * {
@@ -31,7 +33,7 @@
     }
 
     main {
-      max-width: 880px;
+      max-width: 920px;
       margin: 0 auto;
       padding: 40px 20px;
     }
@@ -43,7 +45,7 @@
     }
 
     h2 {
-      margin: 28px 0 10px;
+      margin: 0 0 10px;
       font-size: 20px;
     }
 
@@ -142,6 +144,15 @@
       margin-top: 16px;
     }
 
+    .ok {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid #abefc6;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-top: 16px;
+    }
+
     .ok-list {
       margin: 10px 0 0;
       padding-left: 20px;
@@ -156,17 +167,26 @@
 <body>
   <main>
     <h1>阿酷 Threads OAuth 測試頁</h1>
-    <p>這個頁面用來測試 Threads 帳號授權。它只會建立 Meta / Threads 官方授權網址，不會要求密碼，也不會儲存 App Secret。</p>
+    <p>這個公開頁只負責接住 Meta / Threads 的授權回傳。它不要求密碼、不儲存 App Secret、不交換 access token。</p>
 
     <section class="panel">
       <h2>Meta 後台請填這個 Redirect URI</h2>
       <code id="redirectUri">https://tslj0427.github.io/akoo-threads-oauth/auth/callback/</code>
-      <p class="small">Meta 後台的「有效的 OAuth 重新導向 URI」必須與這個網址完全相同。</p>
+      <p class="small">Meta 後台的「有效的 OAuth 重新導向 URI」必須與這個網址完全相同，包含最後的斜線。</p>
     </section>
 
     <section class="panel">
-      <h2>連接 Threads 帳號</h2>
-      <p>請貼上 Meta 後台顯示的 Threads App ID。App ID 不是 Secret，可以出現在這裡；App Secret 不可以貼在這個頁面。</p>
+      <h2>要測 threads_content_publish，請從本機工具開始</h2>
+      <p>發文權限需要 App Secret 換 token，所以正式測試要先打開本機頁面，再由本機頁面跳去授權。</p>
+      <code>http://127.0.0.1:8787/</code>
+      <div class="ok">
+        正確流程：本機測試器 → Meta 授權頁 → 這個公開 callback → 自動轉回本機測試器 → 預覽 → 使用者確認發布。
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>只測 OAuth 跳轉</h2>
+      <p>如果你只是想確認 App ID 與 Redirect URI 是否能跳轉，可在這裡貼 App ID。這個按鈕不會交換 token，也不能完成發文測試。</p>
 
       <label for="clientId">Threads App ID</label>
       <input id="clientId" type="text" inputmode="numeric" autocomplete="off" placeholder="請貼上 Threads App ID">
@@ -174,27 +194,31 @@
       <div class="checks" aria-label="Scopes">
         <label class="check">
           <input type="checkbox" value="threads_basic" checked disabled>
-          <span><strong>threads_basic</strong>：只用來確認授權使用者身分與帳號連接狀態。</span>
+          <span><strong>threads_basic</strong>：確認授權使用者身分與帳號連接狀態。</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" value="threads_content_publish" checked disabled>
+          <span><strong>threads_content_publish</strong>：讓使用者確認後發布 Threads 測試貼文。</span>
         </label>
       </div>
 
       <div class="actions">
-        <button id="connectButton" type="button" disabled>連接 Threads 帳號</button>
+        <button id="connectButton" type="button" disabled>只測授權跳轉</button>
       </div>
 
       <div class="note">
-        這個測試頁不讀取 Threads 密碼、不自動發文、不自動回覆。授權完成後會回到 callback 頁，收到授權碼後再由本機安全流程交換 token。
+        這個公開測試頁不讀取 Threads 密碼、不自動發文、不自動回覆。App Secret 請只輸入在本機測試器，不要貼在這裡。
       </div>
     </section>
 
     <section class="panel">
       <h2>Demo 影片要拍到的重點</h2>
       <ul class="ok-list">
-        <li>使用者自己貼上 Threads App ID。</li>
+        <li>本機工具顯示要使用 threads_basic 與 threads_content_publish。</li>
         <li>使用者自己點「連接 Threads 帳號」。</li>
         <li>畫面跳到 Meta / Threads 官方授權頁。</li>
-        <li>授權完成後回到固定 callback 頁。</li>
-        <li>頁面說明不讀取密碼、不自動發文、不自動回覆。</li>
+        <li>授權完成後回到固定 callback，再轉回本機工具。</li>
+        <li>本機工具先顯示預覽，使用者按確認後才發布測試貼文。</li>
       </ul>
     </section>
   </main>
@@ -224,9 +248,9 @@
       const params = new URLSearchParams({
         client_id: clientId,
         redirect_uri: redirectUri,
-        scope: "threads_basic",
+        scope: "threads_basic,threads_content_publish",
         response_type: "code",
-        state: crypto.randomUUID ? crypto.randomUUID() : String(Date.now())
+        state: `public-debug-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`
       });
 
       window.location.href = `https://threads.net/oauth/authorize?${params.toString()}`;
